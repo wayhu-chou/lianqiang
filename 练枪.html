@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Valorant 瞄准训练器</title>
+<style>
+  :root{
+    --red:#ff4655;
+    --text:#ece8e1;
+    --line:rgba(255,255,255,.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    width:100%;height:100%;margin:0;overflow:hidden;background:#000;
+  }
+  body{
+    font-family:"Segoe UI","Microsoft YaHei",Arial,sans-serif;
+    color:var(--text);
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  #game{
+    display:block;width:100vw;height:100vh;background:#000;
+    cursor:none;
+  }
+  #game.locked{cursor:none;}
+
+  .panel{
+    position:fixed;top:18px;left:18px;width:268px;
+    padding:15px 16px 13px;
+    background:rgba(12,13,16,.86);
+    border:1px solid var(--line);
+    border-left:3px solid var(--red);
+    box-shadow:0 12px 40px rgba(0,0,0,.65);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    z-index:10;
+  }
+  .brand{
+    display:flex;align-items:center;gap:8px;
+    font-size:12px;font-weight:700;letter-spacing:.16em;
+    color:#fff;margin-bottom:14px;white-space:nowrap;
+  }
+  .brand i{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--red);box-shadow:0 0 10px var(--red);
+  }
+  .brand span{color:var(--red);}
+  .row{margin-bottom:11px;}
+  .label{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:12px;letter-spacing:.03em;color:#b9b9c0;margin-bottom:6px;
+  }
+  .label b{
+    color:#fff;font-weight:600;font-variant-numeric:tabular-nums;
+    font-size:12px;
+  }
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;
+    display:block;width:100%;height:4px;border-radius:2px;
+    background:linear-gradient(90deg,rgba(255,70,85,.85),rgba(255,255,255,.16));
+    outline:none;cursor:pointer;margin:0;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:#fff;border:2px solid var(--red);
+    box-shadow:0 0 8px rgba(255,70,85,.7);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:12px;height:12px;border-radius:50%;
+    background:#fff;border:2px solid var(--red);
+    box-shadow:0 0 8px rgba(255,70,85,.7);
+  }
+  .meta{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:12px;color:#b9b9c0;letter-spacing:.03em;
+    padding:7px 0;border-top:1px solid rgba(255,255,255,.06);
+  }
+  .meta b{color:#fff;font-weight:600;}
+
+  .score{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-top:5px;padding-top:11px;
+    border-top:1px solid var(--line);
+    font-size:11px;letter-spacing:.16em;color:#8f8f96;
+  }
+  .score b{
+    font-size:26px;line-height:1;color:var(--red);
+    font-variant-numeric:tabular-nums;
+    text-shadow:0 0 14px rgba(255,70,85,.55);
+  }
+  .tips{
+    margin-top:10px;font-size:11px;line-height:1.7;
+    color:#7d7d85;letter-spacing:.02em;
+  }
+  .tips strong{color:#fff;font-weight:600;}
+
+  .panel-btn{
+    width:100%;margin-top:12px;padding:9px 10px;
+    background:rgba(255,70,85,.10);border:1px solid rgba(255,70,85,.55);
+    color:#fff;font:600 11px "Segoe UI","Microsoft YaHei",sans-serif;
+    letter-spacing:.12em;cursor:pointer;transition:background .15s,border-color .15s;
+  }
+  .panel-btn:hover{background:rgba(255,70,85,.22);border-color:var(--red);}
+
+  .modal{
+    position:fixed;inset:0;z-index:100;display:none;
+    align-items:center;justify-content:center;padding:16px;
+    background:rgba(0,0,0,.74);
+  }
+  .modal.open{display:flex;}
+  .modal-card{
+    width:min(600px,100%);max-height:88vh;overflow-y:auto;
+    padding:18px 20px 20px;background:#0b0c10;
+    border:1px solid var(--line);border-top:2px solid var(--red);
+    box-shadow:0 24px 80px rgba(0,0,0,.85);
+  }
+  .modal-head{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:14px;
+  }
+  .modal-title{font-size:12px;font-weight:700;letter-spacing:.14em;color:#fff;}
+  .modal-close{
+    padding:0 2px;background:none;border:none;color:#fff;
+    font-size:24px;line-height:1;cursor:pointer;
+  }
+  .modal-close:hover{color:var(--red);}
+  .code-area{
+    width:100%;height:62px;padding:8px 10px;resize:vertical;
+    color:#fff;background:#15171c;border:1px solid rgba(255,255,255,.14);
+    border-radius:2px;font:12px/1.5 Consolas,"Courier New",monospace;
+    outline:none;
+  }
+  .code-area:focus{border-color:var(--red);}
+  .code-actions{display:flex;align-items:center;gap:10px;margin-top:8px;}
+  .modal-btn{
+    padding:7px 12px;color:#fff;background:#1a1d23;
+    border:1px solid rgba(255,255,255,.16);border-radius:2px;
+    font-size:11px;letter-spacing:.06em;cursor:pointer;
+  }
+  .modal-btn.primary{background:var(--red);border-color:var(--red);}
+  .modal-btn.primary:hover{background:#ff5f6b;}
+  .msg{font-size:11px;color:#8f8f96;}
+  .msg.ok{color:#6ee7a8;}
+  .msg.err{color:#ff7b86;}
+  .section{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);}
+  .sec-title{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:9px;font-size:11px;font-weight:600;
+    letter-spacing:.08em;color:#fff;
+  }
+  .sec-title .toggle{
+    display:flex;align-items:center;gap:5px;font-size:11px;
+    font-weight:400;letter-spacing:0;color:#9b9ba3;cursor:pointer;
+  }
+  input[type=checkbox]{accent-color:var(--red);cursor:pointer;}
+  .swatches{display:flex;flex-wrap:wrap;gap:8px;}
+  .swatch{
+    width:28px;height:28px;padding:0;border:2px solid rgba(255,255,255,.14);
+    border-radius:3px;cursor:pointer;
+  }
+  .swatch.active{border-color:#fff;box-shadow:0 0 10px rgba(255,255,255,.45);}
+  .custom-row{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-top:9px;font-size:11px;color:#9b9ba3;
+  }
+  input[type=color]{
+    width:46px;height:26px;padding:0;background:#15171c;
+    border:1px solid rgba(255,255,255,.18);border-radius:2px;cursor:pointer;
+  }
+  input[type=color].active{border-color:var(--red);box-shadow:0 0 8px rgba(255,70,85,.5);}
+  .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;}
+  .set{
+    display:grid;grid-template-columns:1fr auto;gap:3px 8px;
+    font-size:11px;color:#9b9ba3;
+  }
+  .set input{grid-column:1 / 3;width:100%;margin:0;}
+  .set b{color:#fff;font-weight:600;font-variant-numeric:tabular-nums;}
+  .checks{display:flex;gap:18px;margin-top:9px;font-size:11px;color:#9b9ba3;}
+  .checks label{display:flex;align-items:center;gap:5px;cursor:pointer;}
+  @media (max-width:520px){
+    .settings-grid{grid-template-columns:1fr;}
+  }
+
+  #hint{
+    position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
+    z-index:9;pointer-events:none;text-align:center;
+    font-size:12px;letter-spacing:.08em;color:rgba(255,255,255,.45);
+    white-space:nowrap;
+  }
+  #hint strong{color:var(--red);font-weight:600;}
+  @media (max-height:620px){
+    .panel{top:10px;left:10px;width:244px;padding:12px 14px 10px;}
+    .brand{margin-bottom:10px;}
+    .row{margin-bottom:8px;}
+    .tips{display:none;}
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div class="panel">
+  <div class="brand"><i></i>VALO <span>AIM</span> TRAINER</div>
+
+  <div class="row">
+    <div class="label"><span>灵敏度</span><b id="sensVal">1.00</b></div>
+    <input id="sens" type="range" min="0.1" max="3" step="0.01" value="1">
+  </div>
+
+  <div class="row">
+    <div class="label"><span>球体半径</span><b id="radVal">18 px</b></div>
+    <input id="rad" type="range" min="6" max="40" step="1" value="18">
+  </div>
+
+  <div class="row">
+    <div class="label"><span>刷新范围</span><b id="arenaVal">40%</b></div>
+    <input id="arena" type="range" min="15" max="55" step="1" value="40">
+  </div>
+
+  <div class="meta"><span>靶球数量</span><b>6 个 · 固定</b></div>
+
+  <div class="score"><span>SCORE / 得分</span><b id="score">0</b></div>
+
+  <button id="quickImportBtn" class="panel-btn" type="button">一键导入准心</button>
+  <button id="crosshairBtn" class="panel-btn" type="button" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.2);">准心设置（高级）</button>
+
+  <div class="tips">
+    <strong>点击画布</strong> 锁定鼠标<br>
+    <strong>移动鼠标</strong> 自由移动准心 · <strong>左键</strong> 射击<br>
+    命中后靶球在圆形范围内随机刷新<br>
+    <strong>一键导入准心</strong> 从剪贴板直接应用无畏契约准心代码<br>
+    <strong>ESC</strong> 解锁并调整参数
+  </div>
+</div>
+
+<div id="crosshairModal" class="modal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-label="准心设置">
+    <div class="modal-head">
+      <span class="modal-title">CROSSHAIR / 准心设置</span>
+      <button id="crosshairClose" class="modal-close" type="button" aria-label="关闭">×</button>
+    </div>
+
+    <div class="sec-title"><span>导入无畏契约准心代码</span><span class="msg">CODE</span></div>
+    <div class="msg" style="margin-bottom:8px;line-height:1.6;">
+      游戏内：设置 → 准心 → 准心档案 → 复制代码，粘贴到下方即可同步颜色、内线、外线、中心点与轮廓。
+    </div>
+    <textarea id="codeInput" class="code-area" spellcheck="false"
+      placeholder="例如：0;P;c;5;h;0;0t;1;0l;4;0o;2;0a;1;0f;0;1b;0"></textarea>
+    <div class="code-actions">
+      <button id="pasteCode" class="modal-btn" type="button">📋 从剪贴板粘贴</button>
+      <button id="applyCode" class="modal-btn primary" type="button">应用代码</button>
+      <span id="codeMsg" class="msg"></span>
+    </div>
+
+    <div class="section">
+      <div class="sec-title"><span>颜色</span><span class="msg">COLOR</span></div>
+      <div id="colorSwatches" class="swatches"></div>
+      <label class="custom-row">自定义颜色 <input type="color" id="customColor" value="#ffffff"></label>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">
+        <span>轮廓</span>
+        <label class="toggle"><input type="checkbox" data-ch="outlines"> 显示</label>
+      </div>
+      <div class="settings-grid">
+        <label class="set">不透明度
+          <b data-val="outlineOpacity"></b>
+          <input type="range" data-ch="outlineOpacity" min="0" max="1" step="0.01">
+        </label>
+        <label class="set">厚度
+          <b data-val="outlineThickness"></b>
+          <input type="range" data-ch="outlineThickness" min="1" max="6" step="1">
+        </label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">
+        <span>内线</span>
+        <label class="toggle"><input type="checkbox" data-ch="inner"> 显示</label>
+      </div>
+      <div class="settings-grid">
+        <label class="set">不透明度
+          <b data-val="innerOpacity"></b>
+          <input type="range" data-ch="innerOpacity" min="0" max="1" step="0.01">
+        </label>
+        <label class="set">长度
+          <b data-val="innerLength"></b>
+          <input type="range" data-ch="innerLength" min="0" max="20" step="1">
+        </label>
+        <label class="set">厚度
+          <b data-val="innerThickness"></b>
+          <input type="range" data-ch="innerThickness" min="0" max="10" step="1">
+        </label>
+        <label class="set">偏移
+          <b data-val="innerOffset"></b>
+          <input type="range" data-ch="innerOffset" min="0" max="20" step="1">
+        </label>
+      </div>
+      <div class="checks">
+        <label><input type="checkbox" data-ch="innerMove"> 移动误差</label>
+        <label><input type="checkbox" data-ch="innerFire"> 开火误差</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">
+        <span>外线</span>
+        <label class="toggle"><input type="checkbox" data-ch="outer"> 显示</label>
+      </div>
+      <div class="settings-grid">
+        <label class="set">不透明度
+          <b data-val="outerOpacity"></b>
+          <input type="range" data-ch="outerOpacity" min="0" max="1" step="0.01">
+        </label>
+        <label class="set">长度
+          <b data-val="outerLength"></b>
+          <input type="range" data-ch="outerLength" min="0" max="20" step="1">
+        </label>
+        <label class="set">厚度
+          <b data-val="outerThickness"></b>
+          <input type="range" data-ch="outerThickness" min="0" max="10" step="1">
+        </label>
+        <label class="set">偏移
+          <b data-val="outerOffset"></b>
+          <input type="range" data-ch="outerOffset" min="0" max="40" step="1">
+        </label>
+      </div>
+      <div class="checks">
+        <label><input type="checkbox" data-ch="outerMove"> 移动误差</label>
+        <label><input type="checkbox" data-ch="outerFire"> 开火误差</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">
+        <span>中心点</span>
+        <label class="toggle"><input type="checkbox" data-ch="dot"> 显示</label>
+      </div>
+      <div class="settings-grid">
+        <label class="set">尺寸
+          <b data-val="dotSize"></b>
+          <input type="range" data-ch="dotSize" min="1" max="6" step="1">
+        </label>
+        <label class="set">不透明度
+          <b data-val="dotOpacity"></b>
+          <input type="range" data-ch="dotOpacity" min="0" max="1" step="0.01">
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="hint">点击画布锁定鼠标 · 移动鼠标自由移动准心 · 左键射击 · <strong>ESC 解锁</strong></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================= 基础 ================= */
+  var canvas   = document.getElementById('game');
+  var ctx      = canvas.getContext('2d', { alpha: false });
+  var panelEl  = document.querySelector('.panel');
+  var scoreEl  = document.getElementById('score');
+  var sensEl   = document.getElementById('sens');
+  var sensVal  = document.getElementById('sensVal');
+  var radEl    = document.getElementById('rad');
+  var radVal   = document.getElementById('radVal');
+  var hintEl   = document.getElementById('hint');
+
+  var TAU = Math.PI * 2;
+  var DPR_MAX = 2;
+  var AIM_MARGIN = 12;
+  var BALL_COUNT = 6;
+
+  var W = 0, H = 0, DPR = 1;
+
+  var cfg = { sens: 1, radius: 18, arenaRatio: 0.4 };
+
+  var PRESET_COLORS = [
+    '#ffffff', '#00ff00', '#a7ff00', '#dfff00',
+    '#ffff00', '#00ffff', '#ff6ec7', '#fb8686'
+  ];
+
+  // 准心设置（与无畏契约参数对应）
+  var ch = makeDefaultCrosshair();
+
+  // 准心位置（屏幕像素坐标，随鼠标自由移动）
+  var aim = { x: 0, y: 0 };
+
+  // 6 个固定靶球（屏幕像素坐标）
+  var balls = [];
+
+  var score = 0;
+  var recoil = 0;
+  var moveError = 0;
+  var effects = [];
+
+  /* ================= 工具 ================= */
+  function rand(min, max) { return min + Math.random() * (max - min); }
+  function clamp(v, min, max) { return v < min ? min : (v > max ? max : v); }
+  function hypot2(x, y) { return Math.sqrt(x * x + y * y); }
+
+  /* ================= 画布尺寸 ================= */
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, DPR_MAX);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+
+    aim.x = clamp(aim.x, AIM_MARGIN, W - AIM_MARGIN);
+    aim.y = clamp(aim.y, AIM_MARGIN, H - AIM_MARGIN);
+  }
+
+  /* ================= 圆形刷新范围 ================= */
+  // 生成范围：以屏幕中心为圆心，半径 = 屏幕短边 × arenaRatio（15% ~ 55%）
+  function arenaRadius() {
+    return Math.max(120, Math.min(W, H) * cfg.arenaRatio);
+  }
+
+  function overlapsPanel(x, y, r) {
+    var pr = panelEl.getBoundingClientRect();
+    return (
+      x + r > pr.left - 6 && x - r < pr.right + 6 &&
+      y + r > pr.top - 6 && y - r < pr.bottom + 6
+    );
+  }
+
+  // 在圆形范围内寻找一个不与已有靶球重叠、也不被面板遮挡的位置
+  function findSpawnPosition(others) {
+    var cx = W / 2;
+    var cy = H / 2;
+    var maxR = Math.max(0, arenaRadius() - cfg.radius - 8);
+    var minGap = cfg.radius * 2 + 20;
+    var best = { x: cx, y: cy };
+    var bestGap = -Infinity;
+
+    for (var i = 0; i < 90; i++) {
+      var ang = rand(0, TAU);
+      var dist = Math.sqrt(Math.random()) * maxR; // 圆内均匀分布
+      var x = cx + Math.cos(ang) * dist;
+      var y = cy + Math.sin(ang) * dist;
+
+      if (overlapsPanel(x, y, cfg.radius)) continue;
+
+      var gap = Infinity;
+      for (var j = 0; j < others.length; j++) {
+        var d = hypot2(x - others[j].x, y - others[j].y);
+        if (d < gap) gap = d;
+      }
+
+      if (gap > bestGap) {
+        bestGap = gap;
+        best = { x: x, y: y };
+      }
+      if (gap >= minGap) return { x: x, y: y };
+    }
+
+    return best;
+  }
+
+  function layoutBalls() {
+    balls = [];
+    for (var i = 0; i < BALL_COUNT; i++) {
+      var p = findSpawnPosition(balls);
+      balls.push({ x: p.x, y: p.y });
+    }
+  }
+
+  function respawnBall(index) {
+    var others = [];
+    for (var i = 0; i < balls.length; i++) {
+      if (i !== index) others.push(balls[i]);
+    }
+    var p = findSpawnPosition(others);
+    balls[index].x = p.x;
+    balls[index].y = p.y;
+  }
+
+  /* ================= 更新 ================= */
+  function update(dt) {
+    recoil = Math.max(0, recoil - dt * 5);
+    moveError = Math.max(0, moveError - dt * 3);
+
+    for (var i = effects.length - 1; i >= 0; i--) {
+      effects[i].t += dt;
+      if (effects[i].t >= effects[i].life) effects.splice(i, 1);
+    }
+  }
+
+  /* ================= 绘制 ================= */
+  function drawBackground() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawBall(x, y) {
+    var r = cfg.radius;
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,70,85,.55)';
+    ctx.shadowBlur = r * 0.9;
+
+    var g = ctx.createRadialGradient(
+      x - r * 0.35, y - r * 0.4, r * 0.06,
+      x, y, r
+    );
+    g.addColorStop(0, '#ffb9bf');
+    g.addColorStop(0.35, '#ff6b77');
+    g.addColorStop(0.78, '#ff4655');
+    g.addColorStop(1, '#8c101c');
+
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.strokeStyle = 'rgba(255,255,255,.16)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(x, y, r - 0.5, 0, TAU);
+    ctx.stroke();
+
+    // 高光
+    ctx.fillStyle = 'rgba(255,255,255,.72)';
+    ctx.beginPath();
+    ctx.arc(x - r * 0.38, y - r * 0.42, Math.max(1.2, r * 0.13), 0, TAU);
+    ctx.fill();
+  }
+
+  function drawEffects() {
+    for (var i = 0; i < effects.length; i++) {
+      var e = effects[i];
+      var k = e.t / e.life;
+      var r = e.r0 + (e.r1 - e.r0) * k;
+      var alpha = 1 - k;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = 'rgba(' + e.color + ',1)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, r, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 命中 +1
+    for (var j = 0; j < effects.length; j++) {
+      var s = effects[j];
+      if (!s.label) continue;
+      var kk = s.t / s.life;
+      ctx.save();
+      ctx.globalAlpha = 1 - kk;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 18px "Segoe UI", "Microsoft YaHei", Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(s.label, s.x, s.y - 26 - kk * 24);
+      ctx.restore();
+    }
+  }
+
+  /* ================= 准心设置与绘制 ================= */
+  function makeDefaultCrosshair() {
+    return {
+      colorIndex: 0,
+      customColor: '#ffffff',
+      outlines: false,
+      outlineOpacity: 1,
+      outlineThickness: 1,
+      dot: false,
+      dotSize: 2,
+      dotOpacity: 1,
+      inner: true,
+      innerOpacity: 1,
+      innerLength: 6,
+      innerThickness: 2,
+      innerOffset: 3,
+      innerLinked: true,
+      innerVerticalLength: 6,
+      innerMove: false,
+      innerFire: false,
+      innerMoveMul: 1,
+      innerFireMul: 1,
+      outer: false,
+      outerOpacity: 0.35,
+      outerLength: 2,
+      outerThickness: 2,
+      outerOffset: 10,
+      outerLinked: true,
+      outerVerticalLength: 2,
+      outerMove: false,
+      outerFire: false,
+      outerMoveMul: 1,
+      outerFireMul: 1
+    };
+  }
+
+  function normalizeHex(value) {
+    var hex = String(value || '').replace(/[^0-9a-f]/gi, '');
+    if (hex.length >= 8) hex = hex.slice(0, 8);
+    if (hex.length === 6) return '#' + hex;
+    if (hex.length === 8) return '#' + hex.slice(0, 6);
+    return null;
+  }
+
+  function crosshairColor() {
+    if (ch.colorIndex === 8) {
+      return normalizeHex(ch.customColor) || '#ffffff';
+    }
+    return PRESET_COLORS[ch.colorIndex] || '#ffffff';
+  }
+
+  function rgba(hex, alpha) {
+    var h = String(hex).replace('#', '');
+    if (h.length === 3) {
+      h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    }
+    var r = parseInt(h.substr(0, 2), 16) || 0;
+    var g = parseInt(h.substr(2, 2), 16) || 0;
+    var b = parseInt(h.substr(4, 2), 16) || 0;
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+  }
+
+  function crosshairError(moveOn, fireOn, moveMul, fireMul) {
+    var extra = 0;
+    if (moveOn) extra += moveError * 10 * (moveMul != null ? moveMul : 1);
+    if (fireOn) extra += recoil * 12 * (fireMul != null ? fireMul : 1);
+    return extra;
+  }
+
+  function crosshairRects(gap, thickness, lenH, lenV) {
+    var rects = [];
+    if (thickness <= 0) return rects;
+    var half = thickness / 2;
+
+    if (lenH > 0) {
+      rects.push({ x: aim.x - gap - lenH, y: aim.y - half, w: lenH, h: thickness });
+      rects.push({ x: aim.x + gap, y: aim.y - half, w: lenH, h: thickness });
+    }
+    if (lenV > 0) {
+      rects.push({ x: aim.x - half, y: aim.y - gap - lenV, w: thickness, h: lenV });
+      rects.push({ x: aim.x - half, y: aim.y + gap, w: thickness, h: lenV });
+    }
+    return rects;
+  }
+
+  function fillRects(rects, color, alpha) {
+    if (!rects.length || alpha <= 0) return;
+    ctx.fillStyle = rgba(color, alpha);
+    for (var i = 0; i < rects.length; i++) {
+      ctx.fillRect(rects[i].x, rects[i].y, rects[i].w, rects[i].h);
+    }
+  }
+
+  function strokeOutline(rects, padding, alpha) {
+    if (!rects.length || alpha <= 0) return;
+    ctx.fillStyle = rgba('#000000', alpha);
+    for (var i = 0; i < rects.length; i++) {
+      var r = rects[i];
+      ctx.fillRect(r.x - padding, r.y - padding, r.w + padding * 2, r.h + padding * 2);
+    }
+  }
+
+  function drawCrosshair() {
+    var color = crosshairColor();
+    var innerGap = ch.innerOffset + crosshairError(ch.innerMove, ch.innerFire, ch.innerMoveMul, ch.innerFireMul);
+    var outerGap = ch.outerOffset + crosshairError(ch.outerMove, ch.outerFire, ch.outerMoveMul, ch.outerFireMul);
+
+    var innerRects = ch.inner ? crosshairRects(
+      innerGap, ch.innerThickness, ch.innerLength,
+      ch.innerLinked ? ch.innerLength : ch.innerVerticalLength
+    ) : [];
+
+    var outerRects = ch.outer ? crosshairRects(
+      outerGap, ch.outerThickness, ch.outerLength,
+      ch.outerLinked ? ch.outerLength : ch.outerVerticalLength
+    ) : [];
+
+    var dotRect = ch.dot ? [{
+      x: aim.x - ch.dotSize / 2,
+      y: aim.y - ch.dotSize / 2,
+      w: ch.dotSize,
+      h: ch.dotSize
+    }] : [];
+
+    ctx.save();
+
+    if (ch.outlines) {
+      var ot = ch.outlineThickness;
+      if (ch.inner && ch.innerOpacity > 0) strokeOutline(innerRects, ot, ch.outlineOpacity);
+      if (ch.outer && ch.outerOpacity > 0) strokeOutline(outerRects, ot, ch.outlineOpacity);
+      if (ch.dot && ch.dotOpacity > 0) strokeOutline(dotRect, ot, ch.outlineOpacity);
+    }
+
+    if (ch.inner && ch.innerOpacity > 0) fillRects(innerRects, color, ch.innerOpacity);
+    if (ch.outer && ch.outerOpacity > 0) fillRects(outerRects, color, ch.outerOpacity);
+    if (ch.dot && ch.dotOpacity > 0) fillRects(dotRect, color, ch.dotOpacity);
+
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    drawBackground();
+
+    for (var i = 0; i < balls.length; i++) {
+      drawBall(balls[i].x, balls[i].y);
+    }
+
+    drawEffects();
+    drawCrosshair();
+  }
+
+  /* ================= 音效（Web Audio 合成，零外部资源） ================= */
+  var audioCtx = null;
+  var masterGain = null;
+
+  function initAudio() {
+    if (audioCtx) {
+      if (audioCtx.state === 'suspended') audioCtx.resume().catch(function () {});
+      return;
+    }
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      audioCtx = new AC();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.35;
+      masterGain.connect(audioCtx.destination);
+    } catch (e) {
+      audioCtx = null;
+    }
+  }
+
+  // 通用 envelope 辅助（传入 GainNode，内部操作其 .gain AudioParam）
+  function makeEnv(node, now, attack, decay, peak, sustain, duration) {
+    try {
+      var p = node.gain;
+      if (typeof p.cancelScheduledValues === 'function') p.cancelScheduledValues(now);
+      p.setValueAtTime(0, now);
+      p.linearRampToValueAtTime(peak, now + attack);
+      p.linearRampToValueAtTime(sustain, now + attack + decay);
+      p.linearRampToValueAtTime(0, now + duration);
+    } catch (e) { /* 浏览器不支持时静默 */ }
+  }
+
+  // 强枪声：低频 boom + 高频 crack（白噪声带通）+ 金属谐波尾音
+  function playHit() {
+    try {
+      initAudio();
+      if (!audioCtx || !masterGain) return;
+
+      var ctx = audioCtx;
+      var now = ctx.currentTime;
+
+      // ============ 1. 低频 boom：sine 从 140Hz 快速跌到 45Hz ============
+      var boom = ctx.createOscillator();
+      boom.type = 'sine';
+      boom.frequency.setValueAtTime(140, now);
+      boom.frequency.exponentialRampToValueAtTime(45, now + 0.09);
+
+      var boomGain = ctx.createGain();
+      boomGain.gain.setValueAtTime(0.9, now);
+      boomGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+      boom.connect(boomGain).connect(masterGain);
+      boom.start(now);
+      boom.stop(now + 0.16);
+
+      // ============ 2. 高频 crack：白噪声 + 带通滤波 ============
+      var bufSize = Math.round(ctx.sampleRate * 0.05);
+      var noiseBuf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+      var data = noiseBuf.getChannelData(0);
+      for (var i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+
+      var noise = ctx.createBufferSource();
+      noise.buffer = noiseBuf;
+
+      var bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.setValueAtTime(3500, now);
+      bp.Q.value = 0.8;
+
+      var noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.55, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+      noise.connect(bp).connect(noiseGain).connect(masterGain);
+      noise.start(now);
+      noise.stop(now + 0.06);
+
+      // ============ 3. 金属谐波尾音：square 700→400Hz + 高通 ============
+      var tail = ctx.createOscillator();
+      tail.type = 'square';
+      tail.frequency.setValueAtTime(700, now);
+      tail.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+
+      var tailHP = ctx.createBiquadFilter();
+      tailHP.type = 'highpass';
+      tailHP.frequency.value = 500;
+
+      var tailGain = ctx.createGain();
+      tailGain.gain.setValueAtTime(0.18, now);
+      tailGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      tail.connect(tailHP).connect(tailGain).connect(masterGain);
+      tail.start(now);
+      tail.stop(now + 0.14);
+
+      // ============ 4. 金属泛音：triangle 1800Hz 很短 ============
+      var sizz = ctx.createOscillator();
+      sizz.type = 'triangle';
+      sizz.frequency.setValueAtTime(1800, now);
+
+      var sizzGain = ctx.createGain();
+      sizzGain.gain.setValueAtTime(0.25, now);
+      sizzGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      sizz.connect(sizzGain).connect(masterGain);
+      sizz.start(now);
+      sizz.stop(now + 0.07);
+    } catch (e) { /* 音效失败不影响核心逻辑 */ }
+  }
+
+  // 未命中音效：低沉短促 thud
+  function playMiss() {
+    try {
+      initAudio();
+      if (!audioCtx || !masterGain) return;
+
+      var ctx = audioCtx;
+      var now = ctx.currentTime;
+
+      var osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(90, now + 0.08);
+
+      var g = ctx.createGain();
+      makeEnv(g, now, 0.001, 0.04, 0.25, 0, 0, 0.10);
+
+      osc.connect(g).connect(masterGain);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } catch (e) { /* 音效失败不影响核心逻辑 */ }
+  }
+
+  /* ================= 射击 ================= */
+  function shoot() {
+    recoil = 1;
+
+    var hitIndex = -1;
+    var hitDist = Infinity;
+
+    for (var i = 0; i < balls.length; i++) {
+      var d = hypot2(balls[i].x - aim.x, balls[i].y - aim.y);
+      if (d <= cfg.radius && d < hitDist) {
+        hitDist = d;
+        hitIndex = i;
+      }
+    }
+
+    if (hitIndex >= 0) {
+      var hitBall = balls[hitIndex];
+
+      score += 1;
+      scoreEl.textContent = String(score);
+
+      playHit();
+
+      effects.push({
+        kind: 'ring', x: hitBall.x, y: hitBall.y, t: 0, life: 0.38,
+        r0: cfg.radius * 0.8, r1: cfg.radius + 72,
+        color: '255,70,85', label: '+1'
+      });
+
+      respawnBall(hitIndex);
+    } else {
+      playMiss();
+      effects.push({
+        kind: 'ring', x: aim.x, y: aim.y, t: 0, life: 0.16,
+        r0: 0, r1: 18, color: '255,255,255'
+      });
+    }
+  }
+
+  /* ================= 鼠标与指针锁定 ================= */
+  function requestLock() {
+    if (document.pointerLockElement === canvas) return;
+    if (!canvas.requestPointerLock) {
+      hintEl.innerHTML = '当前浏览器不支持鼠标锁定，准心将直接跟随鼠标移动';
+      return;
+    }
+    try {
+      var p = canvas.requestPointerLock();
+      if (p && typeof p.catch === 'function') p.catch(function () {});
+    } catch (err) { /* 忽略，等待 pointerlockerror 提示 */ }
+  }
+
+  canvas.addEventListener('click', function () {
+    if (document.pointerLockElement !== canvas) requestLock();
+  });
+
+  canvas.addEventListener('mousedown', function (e) {
+    if (e.button !== 0) return;
+
+    if (document.pointerLockElement !== canvas) {
+      // 未锁定时：准心跟随鼠标，点击球=命中球 —— 直接射击并刷新
+      requestLock();
+      shoot();
+      return;
+    }
+
+    e.preventDefault();
+    shoot();
+  });
+
+  canvas.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+  });
+
+  document.addEventListener('pointerlockchange', function () {
+    var locked = document.pointerLockElement === canvas;
+    canvas.classList.toggle('locked', locked);
+    if (locked) {
+      hintEl.innerHTML = '鼠标已锁定 · 移动鼠标自由移动准心 · 左键射击 · <strong>ESC 解锁</strong>';
+    } else {
+      hintEl.innerHTML = '点击画布锁定鼠标 · 移动鼠标自由移动准心 · 左键射击 · <strong>ESC 解锁</strong>';
+    }
+  });
+
+  document.addEventListener('pointerlockerror', function () {
+    canvas.classList.remove('locked');
+    hintEl.innerHTML = '鼠标锁定未启用，准心已改为直接跟随鼠标移动';
+  });
+
+  // ESC 解除锁定（pointer lock 状态变化为异步，提示由 pointerlockchange 更新）
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+
+    if (crosshairModal.classList.contains('open')) {
+      closeCrosshairSettings();
+      return;
+    }
+
+    if (document.pointerLockElement === canvas) {
+      document.exitPointerLock();
+    }
+  });
+
+  // 未锁定时：准心直接跟随鼠标光标
+  // 锁定时：准心按鼠标位移 × 灵敏度移动，可移动到屏幕任意位置
+  document.addEventListener('mousemove', function (e) {
+    if (document.pointerLockElement === canvas) {
+      var mx = e.movementX || 0;
+      var my = e.movementY || 0;
+
+      aim.x += mx * cfg.sens;
+      aim.y += my * cfg.sens;
+      aim.x = clamp(aim.x, AIM_MARGIN, W - AIM_MARGIN);
+      aim.y = clamp(aim.y, AIM_MARGIN, H - AIM_MARGIN);
+
+      // 移动误差：鼠标移动越快，准心张开越多
+      moveError = Math.min(1, moveError + (Math.abs(mx) + Math.abs(my)) * 0.02);
+    } else if (e.target === canvas) {
+      aim.x = clamp(e.clientX, AIM_MARGIN, W - AIM_MARGIN);
+      aim.y = clamp(e.clientY, AIM_MARGIN, H - AIM_MARGIN);
+    }
+  });
+
+  /* ================= 准心设置 UI ================= */
+  var crosshairBtn    = document.getElementById('crosshairBtn');
+  var crosshairModal  = document.getElementById('crosshairModal');
+  var crosshairClose  = document.getElementById('crosshairClose');
+  var codeInput       = document.getElementById('codeInput');
+  var codeMsg         = document.getElementById('codeMsg');
+  var applyCodeBtn    = document.getElementById('applyCode');
+  var customColorEl   = document.getElementById('customColor');
+  var swatchWrap      = document.getElementById('colorSwatches');
+
+  function numOr(value, fallback, min, max) {
+    var n = parseFloat(value);
+    if (!isFinite(n)) return fallback;
+    if (min != null && n < min) n = min;
+    if (max != null && n > max) n = max;
+    return n;
+  }
+
+  function boolOr(value, fallback) {
+    if (value === '1' || value === 1 || value === true) return true;
+    if (value === '0' || value === 0 || value === false) return false;
+    return fallback;
+  }
+
+  // 无畏契约分享码：0;P;c;5;h;0;0l;4;0o;2;0a;1;0f;0;1b;0
+  // 仅解析主准心 P 段，忽略 ADS(A) 与 狙击(S) 段
+  function parseCrosshairCode(text) {
+    var raw = String(text || '').replace(/\s+/g, '');
+    if (!raw) return null;
+
+    var parts = raw.split(';');
+    var start = parts.indexOf('P');
+    if (start < 0) return null;
+
+    var map = {};
+    var known = {
+      c: 1, u: 1, h: 1, o: 1, t: 1, d: 1, z: 1, a: 1, f: 1,
+      '0b': 1, '0a': 1, '0l': 1, '0t': 1, '0o': 1,
+      '0m': 1, '0f': 1, '0s': 1, '0e': 1,
+      '1b': 1, '1a': 1, '1l': 1, '1t': 1, '1o': 1,
+      '1m': 1, '1f': 1, '1s': 1, '1e': 1
+    };
+    var hits = 0;
+
+    for (var i = start + 1; i + 1 < parts.length; i += 2) {
+      var key = parts[i];
+      if (key === 'P' || key === 'A' || key === 'S') break;
+      if (!parts[i + 1].length) continue;
+      if (known[key]) {
+        map[key] = parts[i + 1];
+        hits += 1;
+      }
+    }
+
+    return hits > 0 ? map : null;
+  }
+
+  function settingsFromCode(map) {
+    var d = makeDefaultCrosshair();
+
+    if (map.c != null) d.colorIndex = Math.round(numOr(map.c, 0, 0, 8));
+    if (map.u != null) {
+      var hex = normalizeHex(map.u);
+      if (hex) d.customColor = hex;
+    }
+
+    if (map.h != null) d.outlines = boolOr(map.h, d.outlines);
+    if (map.o != null) d.outlineOpacity = numOr(map.o, d.outlineOpacity, 0, 1);
+    if (map.t != null) d.outlineThickness = Math.round(numOr(map.t, d.outlineThickness, 1, 6));
+
+    if (map.d != null) d.dot = boolOr(map.d, d.dot);
+    if (map.z != null) d.dotSize = Math.round(numOr(map.z, d.dotSize, 1, 6));
+    if (map.a != null) d.dotOpacity = numOr(map.a, d.dotOpacity, 0, 1);
+
+    if (map['0b'] != null) d.inner = boolOr(map['0b'], d.inner);
+    if (map['0a'] != null) d.innerOpacity = numOr(map['0a'], d.innerOpacity, 0, 1);
+    if (map['0l'] != null) d.innerLength = Math.round(numOr(map['0l'], d.innerLength, 0, 20));
+    if (map['0t'] != null) d.innerThickness = Math.round(numOr(map['0t'], d.innerThickness, 0, 10));
+    if (map['0o'] != null) d.innerOffset = Math.round(numOr(map['0o'], d.innerOffset, 0, 20));
+    if (map['0m'] != null) d.innerMove = boolOr(map['0m'], d.innerMove);
+    if (map['0f'] != null) d.innerFire = boolOr(map['0f'], d.innerFire);
+    if (map['0s'] != null) d.innerMoveMul = numOr(map['0s'], d.innerMoveMul, 0.1, 5);
+    if (map['0e'] != null) d.innerFireMul = numOr(map['0e'], d.innerFireMul, 0.1, 5);
+
+    if (map['1b'] != null) d.outer = boolOr(map['1b'], d.outer);
+    if (map['1a'] != null) d.outerOpacity = numOr(map['1a'], d.outerOpacity, 0, 1);
+    if (map['1l'] != null) d.outerLength = Math.round(numOr(map['1l'], d.outerLength, 0, 20));
+    if (map['1t'] != null) d.outerThickness = Math.round(numOr(map['1t'], d.outerThickness, 0, 10));
+    if (map['1o'] != null) d.outerOffset = Math.round(numOr(map['1o'], d.outerOffset, 0, 40));
+    if (map['1m'] != null) d.outerMove = boolOr(map['1m'], d.outerMove);
+    if (map['1f'] != null) d.outerFire = boolOr(map['1f'], d.outerFire);
+    if (map['1s'] != null) d.outerMoveMul = numOr(map['1s'], d.outerMoveMul, 0.1, 5);
+    if (map['1e'] != null) d.outerFireMul = numOr(map['1e'], d.outerFireMul, 0.1, 5);
+
+    return d;
+  }
+
+  function formatSetting(value) {
+    if (typeof value !== 'number') return String(value);
+    return Math.floor(value) === value ? String(value) : value.toFixed(2);
+  }
+
+  function buildSwatches() {
+    for (var i = 0; i < PRESET_COLORS.length; i++) {
+      (function (index) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'swatch';
+        btn.style.background = PRESET_COLORS[index];
+        btn.title = '颜色 ' + index;
+        btn.setAttribute('aria-label', '颜色 ' + index);
+        btn.addEventListener('click', function () {
+          ch.colorIndex = index;
+          updateSwatches();
+        });
+        swatchWrap.appendChild(btn);
+      })(i);
+    }
+  }
+
+  function updateSwatches() {
+    var swatches = swatchWrap.querySelectorAll('.swatch');
+    for (var i = 0; i < swatches.length; i++) {
+      swatches[i].classList.toggle('active', ch.colorIndex === i);
+    }
+    customColorEl.classList.toggle('active', ch.colorIndex === 8);
+  }
+
+  function updateCrosshairOutputs() {
+    var outputs = crosshairModal.querySelectorAll('[data-val]');
+    for (var i = 0; i < outputs.length; i++) {
+      var key = outputs[i].getAttribute('data-val');
+      outputs[i].textContent = formatSetting(ch[key]);
+    }
+  }
+
+  function syncCrosshairUI() {
+    var inputs = crosshairModal.querySelectorAll('[data-ch]');
+    for (var i = 0; i < inputs.length; i++) {
+      var key = inputs[i].getAttribute('data-ch');
+      if (inputs[i].type === 'checkbox') {
+        inputs[i].checked = !!ch[key];
+      } else {
+        inputs[i].value = ch[key];
+      }
+    }
+    customColorEl.value = normalizeHex(ch.customColor) || '#ffffff';
+    customColorEl.classList.toggle('active', ch.colorIndex === 8);
+    updateSwatches();
+    updateCrosshairOutputs();
+  }
+
+  function openCrosshairSettings() {
+    if (document.pointerLockElement === canvas) document.exitPointerLock();
+    crosshairModal.classList.add('open');
+    crosshairModal.setAttribute('aria-hidden', 'false');
+    codeMsg.textContent = '';
+    codeMsg.className = 'msg';
+  }
+
+  function closeCrosshairSettings() {
+    crosshairModal.classList.remove('open');
+    crosshairModal.setAttribute('aria-hidden', 'true');
+  }
+
+  // 读取剪贴板，降级为旧 API
+  function readClipboard(onOk, onFail) {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(function (t) { onOk(t || ''); }).catch(function (e) {
+        onFail(e || new Error('剪贴板未授权'));
+      });
+    } else {
+      onFail(new Error('当前浏览器不支持剪贴板 API'));
+    }
+  }
+
+  // 面板顶部短暂提示（2 秒）
+  var panelHintTimer = null;
+  function panelHint(text) {
+    if (panelHintTimer) clearTimeout(panelHintTimer);
+    var old = panelEl.querySelector('.hint-banner');
+    if (old) old.remove();
+
+    var banner = document.createElement('div');
+    banner.className = 'hint-banner';
+    banner.textContent = text;
+    Object.assign(banner.style, {
+      marginTop: '10px', padding: '6px 10px', fontSize: '11px',
+      color: '#fff', background: 'rgba(255,70,85,.25)', border: '1px solid rgba(255,70,85,.6)',
+      letterSpacing: '.04em', textAlign: 'center'
+    });
+    panelEl.appendChild(banner);
+
+    panelHintTimer = setTimeout(function () {
+      banner.style.transition = 'opacity .3s';
+      banner.style.opacity = '0';
+      setTimeout(function () { banner.remove(); }, 300);
+    }, 2000);
+  }
+
+  function applyCrosshairCode() {
+    var map = parseCrosshairCode(codeInput.value);
+    if (!map) {
+      codeMsg.textContent = '无法识别，请粘贴完整的无畏契约准心分享代码';
+      codeMsg.className = 'msg err';
+      return;
+    }
+
+    ch = settingsFromCode(map);
+    syncCrosshairUI();
+
+    var desc = [];
+    if (map.c != null) desc.push('颜色');
+    if (map['0b'] != null || map['0l'] != null || map['0o'] != null) desc.push('内线');
+    if (map['1b'] != null || map['1l'] != null || map['1o'] != null) desc.push('外线');
+    if (map.d != null) desc.push('中心点');
+    if (map.h != null) desc.push('轮廓');
+
+    codeMsg.textContent = '已应用' + (desc.length ? '：' + desc.join(' / ') : '');
+    codeMsg.className = 'msg ok';
+  }
+
+  buildSwatches();
+  syncCrosshairUI();
+
+  var chInputs = crosshairModal.querySelectorAll('[data-ch]');
+  for (var ci = 0; ci < chInputs.length; ci++) {
+    (function (el) {
+      var key = el.getAttribute('data-ch');
+      el.addEventListener('input', function () {
+        ch[key] = el.type === 'checkbox' ? el.checked : parseFloat(el.value);
+        updateCrosshairOutputs();
+      });
+    })(chInputs[ci]);
+  }
+
+  customColorEl.addEventListener('input', function () {
+    var hex = normalizeHex(customColorEl.value);
+    if (!hex) return;
+    ch.customColor = hex;
+    ch.colorIndex = 8;
+    updateSwatches();
+  });
+
+  crosshairBtn.addEventListener('click', openCrosshairSettings);
+  crosshairClose.addEventListener('click', closeCrosshairSettings);
+  applyCodeBtn.addEventListener('click', applyCrosshairCode);
+
+  // 弹窗内：从剪贴板粘贴
+  var pasteCodeBtn = document.getElementById('pasteCode');
+  pasteCodeBtn.addEventListener('click', function () {
+    readClipboard(function (text) {
+      if (text) {
+        codeInput.value = text.trim();
+        codeMsg.textContent = '已粘贴，点击"应用代码"生效';
+        codeMsg.className = 'msg';
+      }
+    }, function (err) {
+      codeMsg.textContent = '无法读取剪贴板：' + err.message;
+      codeMsg.className = 'msg err';
+    });
+  });
+
+  // 面板：一键导入（粘贴 + 应用）
+  var quickImportBtn = document.getElementById('quickImportBtn');
+  quickImportBtn.addEventListener('click', function () {
+    readClipboard(function (text) {
+      if (!text) {
+        panelHint('剪贴板为空');
+        return;
+      }
+      var map = parseCrosshairCode(text);
+      if (!map) {
+        panelHint('未检测到准心代码，请先在游戏内复制');
+        return;
+      }
+      ch = settingsFromCode(map);
+      panelHint('✅ 准心已导入');
+    }, function () {
+      // 降级：打开弹窗让用户手动粘贴
+      codeInput.value = '';
+      codeMsg.textContent = '浏览器未授权剪贴板，请手动粘贴';
+      codeMsg.className = 'msg err';
+      openCrosshairSettings();
+    });
+  });
+
+  crosshairModal.addEventListener('mousedown', function (e) {
+    if (e.target === crosshairModal) closeCrosshairSettings();
+  });
+
+  codeInput.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') applyCrosshairCode();
+  });
+
+  /* ================= 控件 ================= */
+  var arenaEl  = document.getElementById('arena');
+  var arenaVal = document.getElementById('arenaVal');
+
+  sensEl.addEventListener('input', function () {
+    cfg.sens = parseFloat(sensEl.value) || 1;
+    sensVal.textContent = cfg.sens.toFixed(2);
+  });
+
+  radEl.addEventListener('input', function () {
+    cfg.radius = parseInt(radEl.value, 10) || 18;
+    radVal.textContent = cfg.radius + ' px';
+  });
+
+  arenaEl.addEventListener('input', function () {
+    cfg.arenaRatio = (parseInt(arenaEl.value, 10) || 40) / 100;
+    arenaVal.textContent = arenaEl.value + '%';
+    layoutBalls(); // 拖动后立即重新排布靶球
+  });
+
+  window.addEventListener('resize', function () {
+    resize();
+    layoutBalls();
+  });
+
+  /* ================= 主循环 ================= */
+  var last = 0;
+  function frame(now) {
+    if (!last) last = now;
+    var dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+
+    update(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  /* ================= 启动 ================= */
+  resize();
+  aim.x = W / 2;
+  aim.y = H / 2;
+  layoutBalls();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
